@@ -138,15 +138,16 @@ The architecture is **extensible by design**. Adding a new language requires one
 ```
 GitHub (dev branch) ──push──► GitHub Actions ──► Self-Hosted Runner ──► /opt/zilp ──► Docker Compose
                                     │                                      │
-                                    │ 1. git pull origin dev               │ PostgreSQL (persistent volume)
-                                    │ 2. docker compose build              │ Redis (persistent volume)
-                                    │ 3. docker compose up -d              │ FastAPI (port 8000)
-                                    │ 4. health check validation           │
-                                    │ 5. log commit & status               │
+                                    │ 1. actions/checkout@v4              │ PostgreSQL (persistent volume)
+                                    │ 2. rsync to /opt/zilp               │ Redis (persistent volume)
+                                    │ 3. docker compose build             │ FastAPI (port 8000)
+                                    │ 4. docker compose up -d             │
+                                    │ 5. health check validation          │
+                                    │ 6. log commit & status              │
                                     └──────────────────────────────────────┘
 ```
 
-Every push to `dev` automatically deploys to **185.162.125.127** via a self-hosted GitHub Actions runner (`deployerunner`). Database volumes persist across deployments — no data loss.
+Every push to `dev` automatically deploys to **185.162.125.127** via a self-hosted GitHub Actions runner (`deployerunner`). The server is treated as a Docker runtime only — GitHub is the source of truth, the runner is the deploy engine.
 
 **Pipeline files:**
 - `.github/workflows/dev-deploy.yml` — GitHub Actions workflow
