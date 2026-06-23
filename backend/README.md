@@ -402,22 +402,102 @@ alembic downgrade -1                      # Roll back
 
 ## Deployment
 
+### Architecture
+
+```
+GitHub (dev branch)
+        │ push
+        ▼
+GitHub Actions (dev-deploy.yml)
+        │
+        ▼
+Self-Hosted Runner (deployerunner)
+        │ labels: self-hosted, prod, zilp
+        ▼
+/opt/zilp (server workspace)
+        │
+        ▼
+docker compose build && up -d
+        │
+        ▼
+FastAPI (127.0.0.1:8000)
+        │
+        ▼
+Nginx Reverse Proxy (185.162.125.127:80/443)
+        │
+        ▼
+Public API
+```
+
+### CI/CD Pipeline
+
+Every push to the `dev` branch triggers automatic deployment:
+
+```yaml
+# .github/workflows/dev-deploy.yml
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, prod, zilp]
+    steps:
+      - Sync latest code (git pull origin dev)
+      - Build Docker images (docker compose build)
+      - Restart services (docker compose up -d --remove-orphans)
+      - Wait for stabilization (sleep 15)
+      - Validate /health endpoint (curl -f http://localhost:8000/health)
+      - Log deployment (commit hash, timestamp, status)
+```
+
+**Safety guarantees:**
+- PostgreSQL and Redis data persist in named Docker volumes
+- No volumes are deleted during deployment
+- No `down` or `rm` commands touch persistent volumes
+- Failed health checks abort the pipeline without data loss
+- Rollback via `git checkout <last-stable-commit> && docker compose up -d`
+
 ### Production Checklist
 
 - [ ] Set `JWT_SECRET` to a cryptographic random string (`openssl rand -hex 32`)
-- [ ] Change PostgreSQL credentials
-- [ ] Enable Redis password authentication
+- [ ] Change PostgreSQL credentials in `.env`
 - [ ] Restrict `CORS_ORIGINS` to your domain(s)
 - [ ] Set `DEBUG=false`
 - [ ] Set `LOG_LEVEL=WARNING` or `ERROR`
-- [ ] Configure HTTPS via reverse proxy (Nginx, Traefik)
+- [ ] Configure SSL certificates in Nginx
 - [ ] Set up automated database backups
 - [ ] Configure resource limits in Docker Compose
 
-### Docker Compose (Production)
+### Server Setup (One-Time)
 
 ```bash
-docker compose -f docker/docker-compose.yml --env-file .env.production up -d
+# On the production server (185.162.125.127):
+bash scripts/setup.sh
+```
+
+The setup script installs Docker, the GitHub Actions runner, Nginx, clones the repo, and creates a default `.env`.
+
+### Manual Deployment
+
+```bash
+bash scripts/deploy.sh
+```
+
+### Rollback
+
+```bash
+# Rollback to previous commit
+bash scripts/rollback.sh
+
+# Rollback to specific commit
+bash scripts/rollback.sh <commit-hash>
+```
+
+### Health Check
+
+```bash
+bash scripts/healthcheck.sh
 ```
 
 ---

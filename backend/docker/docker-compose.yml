@@ -2,26 +2,30 @@ version: "3.8"
 
 services:
   api:
+    image: zilp-api:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - PYTHONPATH=/app
-      - DATABASE_URL=postgresql://zilp:zilp_secret@db:5432/zilp
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
-      - JWT_ALGORITHM=HS256
-      - JWT_EXPIRATION_MINUTES=30
-      - JWT_REFRESH_EXPIRATION_DAYS=7
-      - API_RATE_LIMIT=100
-      - API_RATE_LIMIT_WINDOW=60
-      - CORS_ORIGINS=["*"]
-      - LOG_LEVEL=INFO
-      - LOG_FORMAT=json
-    volumes:
-      - ..:/app:ro
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-30}
+      - JWT_REFRESH_EXPIRATION_DAYS=${JWT_REFRESH_EXPIRATION_DAYS:-7}
+      - API_RATE_LIMIT=${API_RATE_LIMIT:-100}
+      - API_RATE_LIMIT_WINDOW=${API_RATE_LIMIT_WINDOW:-60}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["*"]}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - DEBUG=${DEBUG:-false}
+    env_file:
+      - ../.env
     restart: unless-stopped
     depends_on:
       db:
@@ -36,31 +40,48 @@ services:
       start_period: 40s
     networks:
       - zilp_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   db:
     image: postgres:15-alpine
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     environment:
-      - POSTGRES_USER=zilp
-      - POSTGRES_PASSWORD=zilp_secret
-      - POSTGRES_DB=zilp
+      - POSTGRES_USER=${POSTGRES_USER:-zilp}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-zilp}
+    env_file:
+      - ../.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zilp -d zilp"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zilp} -d ${POSTGRES_DB:-zilp}"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
     networks:
       - zilp_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -71,11 +92,23 @@ services:
       retries: 5
     networks:
       - zilp_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 volumes:
   postgres_data:
+    name: zilp_postgres_data
   redis_data:
+    name: zilp_redis_data
 
 networks:
   zilp_network:
+    name: zilp_network
     driver: bridge

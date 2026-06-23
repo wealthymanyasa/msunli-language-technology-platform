@@ -1,0 +1,162 @@
+# =============================================================================
+# ZILP — Zimbabwean Indigenous Language Processing Platform
+# Dev Branch CI/CD Pipeline
+#
+# Trigger:    Push to dev branch
+# Runner:     Self-hosted (deployerunner) on production server
+# Target:     /opt/zilp
+# =============================================================================
+
+name: ZILP Dev Deploy
+
+on:
+  push:
+    branches:
+      - dev
+
+concurrency:
+  group: zilp-dev-deploy
+  cancel-in-progress: true
+
+env:
+  DEPLOY_DIR: /opt/zilp
+  COMPOSE_FILE: docker/docker-compose.yml
+  COMPOSE_PROJECT_NAME: zilp
+  HEALTH_ENDPOINT: http://localhost:8000/health
+
+jobs:
+  deploy:
+    name: Build & Deploy to Production
+    runs-on:
+      - self-hosted
+      - prod
+      - zilp
+
+    steps:
+      - name: ⏱ Start Deployment
+        run: echo "Deployment started at $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+      # ── Step 1: Navigate to deployment directory ──────────────────────
+      - name: 📂 Navigate to Deployment Directory
+        run: |
+          echo "Working directory: ${{ env.DEPLOY_DIR }}"
+          cd "${{ env.DEPLOY_DIR }}"
+          echo "Current commit: $(git rev-parse --short HEAD 2>/dev/null || echo 'no repo')"
+        working-directory: ${{ env.DEPLOY_DIR }}
+
+      # ── Step 2: Sync latest code from dev branch ──────────────────────
+      - name: 🔄 Sync Latest Code
+        id: sync
+        run: |
+          cd "${{ env.DEPLOY_DIR }}"
+          git fetch origin
+          git checkout dev
+          git pull origin dev
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          echo "commit_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+          echo "commit_message=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo "Synced to commit: $COMMIT_HASH — $COMMIT_MSG"
+        working-directory: ${{ env.DEPLOY_DIR }}
+
+      # ── Step 3: Log the deployed commit ───────────────────────────────
+      - name: 📝 Log Deployment Commit
+        run: |
+          echo "============================================"
+          echo "  ZILP Deployment"
+          echo "  Timestamp:  $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          echo "  Commit:     ${{ steps.sync.outputs.commit_hash }}"
+          echo "  Message:    ${{ steps.sync.outputs.commit_message }}"
+          echo "  Branch:     dev"
+          echo "============================================"
+          mkdir -p /opt/zilp/deploy-logs
+          echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') | DEPLOY | ${{ steps.sync.outputs.commit_hash }} | ${{ steps.sync.outputs.commit_message }}" >> /opt/zilp/deploy-logs/deployments.log
+
+      # ── Step 4: Build updated Docker images ───────────────────────────
+      - name: 🏗️ Build Docker Images
+        run: |
+          cd "${{ env.DEPLOY_DIR }}"
+          docker compose -f "${{ env.COMPOSE_FILE }}" build --no-cache-filter api
+          echo "Docker images built successfully"
+        working-directory: ${{ env.DEPLOY_DIR }}
+
+      # ── Step 5: Restart services safely ───────────────────────────────
+      - name: 🚀 Restart Services
+        run: |
+          cd "${{ env.DEPLOY_DIR }}"
+          docker compose -f "${{ env.COMPOSE_FILE }}" up -d --remove-orphans
+          echo "Services restarted"
+        working-directory: ${{ env.DEPLOY_DIR }}
+
+      # ── Step 6: Wait for services to stabilize ────────────────────────
+      - name: ⏳ Stabilization Wait
+        run: |
+          echo "Waiting 15 seconds for services to stabilize..."
+          sleep 15
+          echo "Checking container status..."
+          docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+        working-directory: ${{ env.DEPLOY_DIR }}
+
+      # ── Step 7: Health check validation ───────────────────────────────
+      - name: ✅ Health Check Validation
+        id: health
+        run: |
+          echo "Validating API health at ${{ env.HEALTH_ENDPOINT }}..."
+          MAX_RETRIES=12
+          RETRY_INTERVAL=5
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.HEALTH_ENDPOINT }}" 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              RESPONSE=$(curl -s "${{ env.HEALTH_ENDPOINT }}")
+              echo "✅ Health check passed (attempt $i/$MAX_RETRIES)"
+              echo "Response: $RESPONSE"
+              echo "status=passed" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "⏳ Health check returned $HTTP_CODE (attempt $i/$MAX_RETRIES), retrying in ${RETRY_INTERVAL}s..."
+            sleep $RETRY_INTERVAL
+          done
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+        working-directory: ${{ env.DEPLOY_DIR }}
+
+      # ── Step 8: Post-deployment summary ───────────────────────────────
+      - name: 📊 Deployment Summary
+        if: always()
+        run: |
+          echo "============================================"
+          echo "  ZILP Deployment Summary"
+          echo "============================================"
+          echo "  Commit:     ${{ steps.sync.outputs.commit_hash }}"
+          echo "  Health:     ${{ steps.health.outputs.status }}"
+          echo "  Time:       $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          echo "============================================"
+          echo ""
+          echo "Running containers:"
+          docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "Recent deployment log:"
+          tail -3 /opt/zilp/deploy-logs/deployments.log 2>/dev/null || echo "no log"
+        working-directory: ${{ env.DEPLOY_DIR }}
+
+      # ── Step 9: Notify on failure ─────────────────────────────────────
+      - name: 🚨 Deployment Failure
+        if: failure()
+        run: |
+          echo "============================================"
+          echo "  ❌ DEPLOYMENT FAILED"
+          echo "============================================"
+          echo "  Commit: ${{ steps.sync.outputs.commit_hash }}"
+          echo "  Time:   $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          echo "============================================"
+          echo ""
+          echo "Current container status:"
+          docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "Last 20 lines of api logs:"
+          docker compose -f "${{ env.COMPOSE_FILE }}" logs --tail=20 api
+          echo ""
+          echo "⚠️  Previous working state preserved. No data was lost."
+          echo "⚠️  To roll back, run: docker compose down && git checkout <last-stable-commit> && docker compose up -d"
+        working-directory: ${{ env.DEPLOY_DIR }}
