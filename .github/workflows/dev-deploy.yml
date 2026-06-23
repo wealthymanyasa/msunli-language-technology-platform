@@ -71,7 +71,7 @@ jobs:
       # ── Step 4: Build updated Docker images ─────────────────────────────
       - name: Build Docker Images
         run: |
-          docker compose -f "${{ env.COMPOSE_FILE }}" build --no-cache-filter api
+          docker compose -f "${{ env.COMPOSE_FILE }}" build --no-cache api
           echo "Docker images built successfully"
         working-directory: ${{ env.DEPLOY_DIR }}
 
