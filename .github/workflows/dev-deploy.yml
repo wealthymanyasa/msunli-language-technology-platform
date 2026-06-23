@@ -20,7 +20,7 @@ concurrency:
 
 env:
   DEPLOY_DIR: /opt/zilp
-  COMPOSE_FILE: docker/docker-compose.yml
+  COMPOSE_FILE: backend/docker/docker-compose.yml
   COMPOSE_PROJECT_NAME: zilp
   HEALTH_ENDPOINT: http://localhost:8000/health
 

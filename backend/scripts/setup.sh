@@ -70,8 +70,8 @@ fi
 
 # ── Nginx Configuration ─────────────────────────────────────────────────────
 echo "[7/7] Configuring Nginx..."
-if [ -f "docker/nginx.conf" ]; then
-    cp docker/nginx.conf /etc/nginx/sites-available/zilp
+if [ -f "backend/docker/nginx.conf" ]; then
+    cp backend/docker/nginx.conf /etc/nginx/sites-available/zilp
     if [ ! -f "/etc/nginx/sites-enabled/zilp" ]; then
         ln -s /etc/nginx/sites-available/zilp /etc/nginx/sites-enabled/
     fi
@@ -93,8 +93,8 @@ ufw allow 'Nginx Full'
 ufw --force enable
 
 # ── Create .env file ────────────────────────────────────────────────────────
-if [ ! -f "/opt/zilp/.env" ]; then
-    cat > /opt/zilp/.env << 'ENVEOF'
+if [ ! -f "/opt/zilp/backend/.env" ]; then
+    cat > /opt/zilp/backend/.env << 'ENVEOF'
 APP_NAME=ZILP Language Technology Platform
 APP_VERSION=1.0.0
 DEBUG=false
@@ -117,7 +117,7 @@ API_RATE_LIMIT=100
 API_RATE_LIMIT_WINDOW=60
 CORS_ORIGINS=["*"]
 ENVEOF
-    echo "[!] DEFAULT .env CREATED — EDIT /opt/zilp/.env WITH REAL SECRETS"
+    echo "[!] DEFAULT .env CREATED — EDIT /opt/zilp/backend/.env WITH REAL SECRETS"
 fi
 
 # ── Summary ─────────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ echo "  Nginx config:         /etc/nginx/sites-available/zilp"
 echo "  Runner directory:     /opt/actions-runner"
 echo ""
 echo "  NEXT STEPS:"
-echo "  1. Edit /opt/zilp/.env with real secrets"
+echo "  1. Edit /opt/zilp/backend/.env with real secrets"
 echo "  2. Configure and start the GitHub runner (see step 4)"
 echo "  3. Place SSL certs in /etc/nginx/ssl/"
 echo "  4. Push to dev branch to trigger first deployment"

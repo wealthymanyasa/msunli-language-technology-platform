@@ -11,7 +11,7 @@
 set -euo pipefail
 
 DEPLOY_DIR="${DEPLOY_DIR:-/opt/zilp}"
-COMPOSE_FILE="${COMPOSE_FILE:-docker/docker-compose.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-backend/docker/docker-compose.yml}"
 HEALTH_ENDPOINT="${HEALTH_ENDPOINT:-http://localhost:8000/health}"
 MAX_HEALTH_RETRIES="${MAX_HEALTH_RETRIES:-12}"
 RETRY_INTERVAL="${RETRY_INTERVAL:-5}"
