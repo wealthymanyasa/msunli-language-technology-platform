@@ -1,6 +1,6 @@
 <div align="center">
   <br/>
-  <h1>MSUNLI Language Technology Platform</h1>
+  <h1>MSUNLI's Language Technology Platform</h1>
   <h3><em>Zimbabwean Indigenous Language Processing · Production-Grade NLP</em></h3>
   <br/>
   <p>
