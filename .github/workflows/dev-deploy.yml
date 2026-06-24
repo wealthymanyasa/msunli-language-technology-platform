@@ -69,71 +69,78 @@ jobs:
           mkdir -p "${{ env.DEPLOY_DIR }}/deploy-logs"
           echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') | DEPLOY | ${{ steps.sync.outputs.commit_hash }} | ${{ steps.sync.outputs.commit_message }}" >> "${{ env.DEPLOY_DIR }}/deploy-logs/deployments.log"
 
-      # ── Step 4: Ensure .env file exists ──────────────────────────────────
-      - name: Ensure Environment File
+      # ── Step 4: Create .env from GitHub Secrets ─────────────────────────
+      - name: Create and Validate Environment File
+        env:
+          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+          DATABASE_URL: ${{ vars.DATABASE_URL }}
+          REDIS_URL: ${{ vars.REDIS_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          create_env() {
-            printf '%s\n' \
-              'APP_NAME=ZILP Language Technology Platform' \
-              'APP_VERSION=1.0.0' \
-              'DEBUG=false' \
-              'LOG_LEVEL=INFO' \
-              'LOG_FORMAT=json' \
-              'POSTGRES_USER=zilp' \
-              'POSTGRES_PASSWORD=CHANGE_ME_NOW' \
-              'POSTGRES_DB=zilp' \
-              'DATABASE_URL=postgresql://zilp:CHANGE_ME_NOW@db:5432/zilp' \
-              'REDIS_URL=redis://redis:6379' \
-              'JWT_SECRET=CHANGE_ME_TO_A_CRYPTOGRAPHIC_RANDOM_STRING' \
-              'JWT_ALGORITHM=HS256' \
-              'JWT_EXPIRATION_MINUTES=30' \
-              'JWT_REFRESH_EXPIRATION_DAYS=7' \
-              'API_RATE_LIMIT=100' \
-              'API_RATE_LIMIT_WINDOW=60' \
-              'CORS_ORIGINS=["*"]'
-          }
-          if [ -f "${{ env.DEPLOY_DIR }}/backend/.env" ]; then
-            echo "backend/.env already exists — preserving"
-          else
-            if [ -f "${{ env.DEPLOY_DIR }}/backend/.env.production" ]; then
-              cp "${{ env.DEPLOY_DIR }}/backend/.env.production" "${{ env.DEPLOY_DIR }}/backend/.env"
-              echo "Created backend/.env from .env.production template"
-            else
-              create_env > "${{ env.DEPLOY_DIR }}/backend/.env"
-              echo "Created backend/.env with default placeholder values"
-            fi
-            echo "!!! IMPORTANT: Edit backend/.env with real secrets !!!"
+          mkdir -p backend
+          printenv | grep -E "^(POSTGRES|DATABASE_URL|REDIS_URL|JWT_SECRET)=" > backend/.env
+          if [ ! -s backend/.env ]; then
+            echo "FATAL: backend/.env is empty. Required GitHub Secrets are missing."
+            exit 1
           fi
-          if [ ! -f "${{ env.DEPLOY_DIR }}/.env" ]; then
-            cp "${{ env.DEPLOY_DIR }}/backend/.env" "${{ env.DEPLOY_DIR }}/.env"
-            echo "Also created .env at project root for Docker Compose variable resolution"
+          echo "Validating required variables..."
+          for var in POSTGRES_PASSWORD DATABASE_URL REDIS_URL JWT_SECRET; do
+            val=$(printenv "$var")
+            if [ -z "$val" ]; then
+              echo "MISSING: $var"
+              exit 1
+            fi
+          done
+          echo "All required variables are set."
+        working-directory: ${{ env.DEPLOY_DIR }}
+
+      # ── Step 5: Deployment diagnostics ──────────────────────────────────
+      - name: Deployment Diagnostics
+        run: |
+          echo "=== Working directory ==="
+          pwd
+          echo "=== Root directory listing ==="
+          ls -la
+          echo "=== Backend directory listing ==="
+          ls -la backend/
+          echo "=== Environment file check ==="
+          if [ -f backend/.env ]; then
+            line_count=$(wc -l < backend/.env)
+            echo "backend/.env EXISTS ($line_count lines)"
+            echo "=== Required variable names (values not printed) ==="
+            grep -E '^(POSTGRES|DATABASE_URL|REDIS_URL|JWT)' backend/.env | cut -d= -f1 || echo "(no matches)"
+          else
+            echo "MISSING: backend/.env"
+            exit 1
           fi
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 5: Build updated Docker images ─────────────────────────────
+      # ── Step 6: Build updated Docker images ─────────────────────────────
       - name: Build Docker Images
         run: |
-          docker compose -f "${{ env.COMPOSE_FILE }}" build --no-cache api
+          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" build --no-cache api
           echo "Docker images built successfully"
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 6: Restart services ────────────────────────────────────────
+      # ── Step 7: Restart services ────────────────────────────────────────
       - name: Restart Services
         run: |
-          docker compose -f "${{ env.COMPOSE_FILE }}" up -d --remove-orphans
+          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" up -d --remove-orphans
           echo "Services restarted"
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 7: Wait for services to stabilize ──────────────────────────
+      # ── Step 8: Wait for services to stabilize ──────────────────────────
       - name: Stabilization Wait
         run: |
           echo "Waiting 15 seconds for services to stabilize..."
           sleep 15
           echo "Checking container status..."
-          docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 8: Health check validation ─────────────────────────────────
+      # ── Step 9: Health check validation ─────────────────────────────────
       - name: Health Check Validation
         id: health
         run: |
@@ -157,7 +164,7 @@ jobs:
           exit 1
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 9: Post-deployment summary ─────────────────────────────────
+      # ── Step 10: Post-deployment summary ────────────────────────────────
       - name: Deployment Summary
         if: always()
         run: |
@@ -170,13 +177,13 @@ jobs:
           echo "============================================"
           echo ""
           echo "Running containers:"
-          docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
           echo ""
           echo "Recent deployment log:"
           tail -3 "${{ env.DEPLOY_DIR }}/deploy-logs/deployments.log" 2>/dev/null || echo "no log"
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 10: Notify on failure ──────────────────────────────────────
+      # ── Step 11: Notify on failure ──────────────────────────────────────
       - name: Deployment Failure
         if: failure()
         run: |
@@ -188,10 +195,10 @@ jobs:
           echo "============================================"
           echo ""
           echo "Current container status:"
-          docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
           echo ""
           echo "Last 20 lines of api logs:"
-          docker compose -f "${{ env.COMPOSE_FILE }}" logs --tail=20 api
+          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" logs --tail=20 api
           echo ""
           echo "Previous working state preserved. No data was lost."
           echo "To roll back, run: docker compose down && git checkout <last-stable-commit> && docker compose up -d"

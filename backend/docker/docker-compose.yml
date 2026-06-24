@@ -22,8 +22,6 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - DEBUG=${DEBUG:-false}
-    env_file:
-      - ../.env
     restart: unless-stopped
     depends_on:
       db:
@@ -52,8 +50,6 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-zilp}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB:-zilp}
-    env_file:
-      - ../.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
