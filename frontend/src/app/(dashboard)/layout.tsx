@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -125,18 +124,16 @@ export default function DashboardLayout({
 
           {/* User */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start gap-3 px-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col items-start text-sm">
-                  <span className="font-medium">{user?.name || "User"}</span>
-                  <span className="text-xs text-muted-foreground">{user?.email || ""}</span>
-                </div>
-              </Button>
+            <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-secondary/50">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col items-start text-sm">
+                <span className="font-medium">{user?.name || "User"}</span>
+                <span className="text-xs text-muted-foreground">{user?.email || ""}</span>
+              </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuItem onClick={() => router.push("/settings")}>
