@@ -166,7 +166,7 @@ export default function PlaygroundPage() {
               <div className="flex gap-2">
                 <Select
                   value={language}
-                  onValueChange={setLanguage}
+                  onValueChange={(v) => v && setLanguage(v)}
                 >
                   <SelectTrigger className="w-[160px]">
                     <Languages className="h-4 w-4 mr-2" />
