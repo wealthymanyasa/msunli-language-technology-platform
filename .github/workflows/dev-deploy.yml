@@ -78,25 +78,25 @@ jobs:
               echo "Created $ENV_FILE from .env.production template"
             else
               echo "WARNING: No .env or .env.production found — creating minimal .env"
-              cat > "$ENV_FILE" << 'ENVEOF'
-APP_NAME=ZILP Language Technology Platform
-APP_VERSION=1.0.0
-DEBUG=false
-LOG_LEVEL=INFO
-LOG_FORMAT=json
-POSTGRES_USER=zilp
-POSTGRES_PASSWORD=CHANGE_ME_NOW
-POSTGRES_DB=zilp
-DATABASE_URL=postgresql://zilp:CHANGE_ME_NOW@db:5432/zilp
-REDIS_URL=redis://redis:6379
-JWT_SECRET=CHANGE_ME_TO_A_CRYPTOGRAPHIC_RANDOM_STRING
-JWT_ALGORITHM=HS256
-JWT_EXPIRATION_MINUTES=30
-JWT_REFRESH_EXPIRATION_DAYS=7
-API_RATE_LIMIT=100
-API_RATE_LIMIT_WINDOW=60
-CORS_ORIGINS=["*"]
-ENVEOF
+              {
+                echo 'APP_NAME=ZILP Language Technology Platform'
+                echo 'APP_VERSION=1.0.0'
+                echo 'DEBUG=false'
+                echo 'LOG_LEVEL=INFO'
+                echo 'LOG_FORMAT=json'
+                echo 'POSTGRES_USER=zilp'
+                echo 'POSTGRES_PASSWORD=CHANGE_ME_NOW'
+                echo 'POSTGRES_DB=zilp'
+                echo 'DATABASE_URL=postgresql://zilp:CHANGE_ME_NOW@db:5432/zilp'
+                echo 'REDIS_URL=redis://redis:6379'
+                echo 'JWT_SECRET=CHANGE_ME_TO_A_CRYPTOGRAPHIC_RANDOM_STRING'
+                echo 'JWT_ALGORITHM=HS256'
+                echo 'JWT_EXPIRATION_MINUTES=30'
+                echo 'JWT_REFRESH_EXPIRATION_DAYS=7'
+                echo 'API_RATE_LIMIT=100'
+                echo 'API_RATE_LIMIT_WINDOW=60'
+                echo 'CORS_ORIGINS=["*"]'
+              } > "$ENV_FILE"
               echo "Created $ENV_FILE with default placeholder values"
             fi
             echo "!!! IMPORTANT: Edit $ENV_FILE with real secrets for production !!!"
