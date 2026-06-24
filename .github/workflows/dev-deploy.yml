@@ -120,14 +120,14 @@ jobs:
       # ── Step 6: Build updated Docker images ─────────────────────────────
       - name: Build Docker Images
         run: |
-          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" build --no-cache api
+          docker compose -f "${{ env.COMPOSE_FILE }}" build --no-cache api
           echo "Docker images built successfully"
         working-directory: ${{ env.DEPLOY_DIR }}
 
       # ── Step 7: Restart services ────────────────────────────────────────
       - name: Restart Services
         run: |
-          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" up -d --remove-orphans
+          docker compose -f "${{ env.COMPOSE_FILE }}" up -d --remove-orphans
           echo "Services restarted"
         working-directory: ${{ env.DEPLOY_DIR }}
 
@@ -137,7 +137,7 @@ jobs:
           echo "Waiting 15 seconds for services to stabilize..."
           sleep 15
           echo "Checking container status..."
-          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
         working-directory: ${{ env.DEPLOY_DIR }}
 
       # ── Step 9: Health check validation ─────────────────────────────────
@@ -177,7 +177,7 @@ jobs:
           echo "============================================"
           echo ""
           echo "Running containers:"
-          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
           echo ""
           echo "Recent deployment log:"
           tail -3 "${{ env.DEPLOY_DIR }}/deploy-logs/deployments.log" 2>/dev/null || echo "no log"
@@ -195,10 +195,10 @@ jobs:
           echo "============================================"
           echo ""
           echo "Current container status:"
-          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
           echo ""
           echo "Last 20 lines of api logs:"
-          docker compose --env-file backend/.env -f "${{ env.COMPOSE_FILE }}" logs --tail=20 api
+          docker compose -f "${{ env.COMPOSE_FILE }}" logs --tail=20 api
           echo ""
           echo "Previous working state preserved. No data was lost."
           echo "To roll back, run: docker compose down && git checkout <last-stable-commit> && docker compose up -d"
