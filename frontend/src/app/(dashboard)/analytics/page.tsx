@@ -4,7 +4,6 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { useQuery } from "@tanstack/react-query"
 import { analyticsApi } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -26,16 +25,12 @@ import {
   RadialBar,
 } from "recharts"
 import {
-  Calendar,
   TrendingUp,
   TrendingDown,
-  Download,
-  RefreshCw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const COLORS = ["#7C3AED", "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE"]
-const RADIAN = Math.PI / 180
 
 function GaugeChart({ value, label, max = 100 }: { value: number; label: string; max?: number }) {
   const percentage = Math.min((value / max) * 100, 100)

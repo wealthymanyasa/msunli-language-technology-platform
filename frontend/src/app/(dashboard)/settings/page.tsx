@@ -16,7 +16,6 @@ import {
   Sun,
   Key,
   User,
-  Shield,
   Copy,
   Check,
   Eye,
@@ -26,8 +25,6 @@ import {
   Loader2,
   Bell,
 } from "lucide-react"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useThemeStore()

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "sonner"
 import { ThemeProvider } from "@/components/theme-provider"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(

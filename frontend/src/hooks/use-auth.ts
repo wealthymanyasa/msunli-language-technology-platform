@@ -4,7 +4,6 @@ import { useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/auth"
 import { authApi } from "@/services/api"
-import type { User } from "@/types"
 
 export function useAuth() {
   const router = useRouter()

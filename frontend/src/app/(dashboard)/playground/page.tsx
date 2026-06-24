@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import {
   Play,
@@ -65,22 +65,6 @@ const POS_COLORS: Record<string, string> = {
   PRT: "bg-red-500/20 text-red-400 border-red-500/30",
   X: "bg-gray-500/20 text-gray-400 border-gray-500/30",
   PUNCT: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
-}
-
-const ENTITY_COLORS: Record<string, string> = {
-  PERSON: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  ORG: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
-  GPE: "bg-green-500/20 text-green-400 border-green-500/30",
-  LOC: "bg-green-400/20 text-green-300 border-green-400/30",
-  DATE: "bg-red-500/20 text-red-400 border-red-500/30",
-  TIME: "bg-orange-400/20 text-orange-400 border-orange-400/30",
-  MONEY: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  PERCENT: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  PRODUCT: "bg-violet-500/20 text-violet-400 border-violet-500/30",
-  EVENT: "bg-pink-500/20 text-pink-400 border-pink-500/30",
-  LAW: "bg-rose-600/20 text-rose-400 border-rose-600/30",
-  LANGUAGE: "bg-amber-400/20 text-amber-400 border-amber-400/30",
-  WORK_OF_ART: "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30",
 }
 
 export default function PlaygroundPage() {
