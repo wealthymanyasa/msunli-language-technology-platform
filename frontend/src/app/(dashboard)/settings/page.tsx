@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { useTheme } from "@/store/theme"
+import { useThemeStore } from "@/store/theme"
 import { useAuth } from "@/hooks/use-auth"
 import {
   Moon,
@@ -30,7 +30,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function SettingsPage() {
-  const { theme, toggleTheme } = useTheme()
+  const { theme, toggleTheme } = useThemeStore()
   const { user } = useAuth()
   const [showKey, setShowKey] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
