@@ -96,6 +96,28 @@ services:
         limits:
           memory: 256M
 
+  frontend:
+    image: zilp-frontend:latest
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - zilp_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   postgres_data:
     name: zilp_postgres_data

@@ -23,6 +23,7 @@ env:
   COMPOSE_FILE: backend/docker/docker-compose.yml
   COMPOSE_PROJECT_NAME: zilp
   HEALTH_ENDPOINT: http://localhost:8000/health
+  FRONTEND_HEALTH_ENDPOINT: http://localhost/
 
 jobs:
   deploy:
@@ -77,7 +78,7 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
-          docker compose -f "${{ env.COMPOSE_FILE }}" build --no-cache api
+          docker compose -f "${{ env.COMPOSE_FILE }}" build --no-cache api frontend
           echo "Docker images built successfully"
         working-directory: ${{ env.DEPLOY_DIR }}
 
@@ -106,6 +107,9 @@ jobs:
           sleep 15
           echo "Checking container status..."
           docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "Checking frontend readiness..."
+          curl -s -o /dev/null -w "Frontend HTTP status: %{http_code}\n" "${{ env.FRONTEND_HEALTH_ENDPOINT }}" || echo "Frontend not yet ready"
         working-directory: ${{ env.DEPLOY_DIR }}
 
       # ── Step 7: Health check validation ─────────────────────────────────
@@ -167,6 +171,9 @@ jobs:
           echo ""
           echo "Last 20 lines of api logs:"
           docker compose -f "${{ env.COMPOSE_FILE }}" logs --tail=20 api
+          echo ""
+          echo "Last 20 lines of frontend logs:"
+          docker compose -f "${{ env.COMPOSE_FILE }}" logs --tail=20 frontend
           echo ""
           echo "Previous working state preserved. No data was lost."
           echo "To roll back, run: docker compose down && git checkout <last-stable-commit> && docker compose up -d"
