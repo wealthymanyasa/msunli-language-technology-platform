@@ -69,69 +69,37 @@ jobs:
           mkdir -p "${{ env.DEPLOY_DIR }}/deploy-logs"
           echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') | DEPLOY | ${{ steps.sync.outputs.commit_hash }} | ${{ steps.sync.outputs.commit_message }}" >> "${{ env.DEPLOY_DIR }}/deploy-logs/deployments.log"
 
-      # ── Step 4: Create .env from GitHub Secrets ─────────────────────────
-      - name: Create and Validate Environment File
+      # ── Step 4: Build updated Docker images ─────────────────────────────
+      - name: Build Docker Images
         env:
-          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
           DATABASE_URL: ${{ vars.DATABASE_URL }}
           REDIS_URL: ${{ vars.REDIS_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        run: |
-          mkdir -p backend
-          printenv | grep -E "^(POSTGRES|DATABASE_URL|REDIS_URL|JWT_SECRET)=" > backend/.env
-          if [ ! -s backend/.env ]; then
-            echo "FATAL: backend/.env is empty. Required GitHub Secrets are missing."
-            exit 1
-          fi
-          echo "Validating required variables..."
-          for var in POSTGRES_PASSWORD DATABASE_URL REDIS_URL JWT_SECRET; do
-            val=$(printenv "$var")
-            if [ -z "$val" ]; then
-              echo "MISSING: $var"
-              exit 1
-            fi
-          done
-          echo "All required variables are set."
-        working-directory: ${{ env.DEPLOY_DIR }}
-
-      # ── Step 5: Deployment diagnostics ──────────────────────────────────
-      - name: Deployment Diagnostics
-        run: |
-          echo "=== Working directory ==="
-          pwd
-          echo "=== Root directory listing ==="
-          ls -la
-          echo "=== Backend directory listing ==="
-          ls -la backend/
-          echo "=== Environment file check ==="
-          if [ -f backend/.env ]; then
-            line_count=$(wc -l < backend/.env)
-            echo "backend/.env EXISTS ($line_count lines)"
-            echo "=== Required variable names (values not printed) ==="
-            grep -E '^(POSTGRES|DATABASE_URL|REDIS_URL|JWT)' backend/.env | cut -d= -f1 || echo "(no matches)"
-          else
-            echo "MISSING: backend/.env"
-            exit 1
-          fi
-        working-directory: ${{ env.DEPLOY_DIR }}
-
-      # ── Step 6: Build updated Docker images ─────────────────────────────
-      - name: Build Docker Images
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
           docker compose -f "${{ env.COMPOSE_FILE }}" build --no-cache api
           echo "Docker images built successfully"
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 7: Restart services ────────────────────────────────────────
-      - name: Restart Services
+      # ── Step 5: Deploy services (env vars injected at runtime) ──────────
+      - name: Deploy Services
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DATABASE_URL: ${{ vars.DATABASE_URL }}
+          REDIS_URL: ${{ vars.REDIS_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
+          echo "Validating required secrets..."
+          : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set}"
+          : "${DATABASE_URL:?DATABASE_URL is not set}"
+          : "${REDIS_URL:?REDIS_URL is not set}"
+          : "${JWT_SECRET:?JWT_SECRET is not set}"
+          echo "All required variables are set — starting services..."
           docker compose -f "${{ env.COMPOSE_FILE }}" up -d --remove-orphans
           echo "Services restarted"
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 8: Wait for services to stabilize ──────────────────────────
+      # ── Step 6: Wait for services to stabilize ──────────────────────────
       - name: Stabilization Wait
         run: |
           echo "Waiting 15 seconds for services to stabilize..."
@@ -140,7 +108,7 @@ jobs:
           docker compose -f "${{ env.COMPOSE_FILE }}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 9: Health check validation ─────────────────────────────────
+      # ── Step 7: Health check validation ─────────────────────────────────
       - name: Health Check Validation
         id: health
         run: |
@@ -164,7 +132,7 @@ jobs:
           exit 1
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 10: Post-deployment summary ────────────────────────────────
+      # ── Step 8: Post-deployment summary ─────────────────────────────────
       - name: Deployment Summary
         if: always()
         run: |
@@ -183,7 +151,7 @@ jobs:
           tail -3 "${{ env.DEPLOY_DIR }}/deploy-logs/deployments.log" 2>/dev/null || echo "no log"
         working-directory: ${{ env.DEPLOY_DIR }}
 
-      # ── Step 11: Notify on failure ──────────────────────────────────────
+      # ── Step 9: Notify on failure ───────────────────────────────────────
       - name: Deployment Failure
         if: failure()
         run: |

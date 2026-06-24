@@ -10,6 +10,9 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       - PYTHONPATH=/app
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION_MINUTES=30
       - JWT_REFRESH_EXPIRATION_DAYS=7
@@ -19,8 +22,6 @@ services:
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
       - DEBUG=false
-    env_file:
-      - ../.env
     restart: unless-stopped
     depends_on:
       db:
@@ -48,8 +49,7 @@ services:
     environment:
       - POSTGRES_USER=zilp
       - POSTGRES_DB=zilp
-    env_file:
-      - ../.env
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
