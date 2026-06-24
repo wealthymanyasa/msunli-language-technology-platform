@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # ZILP — Manual Deployment Script (fallback)
-#
 # Use this for manual recovery or testing. The CI/CD pipeline uses
 # actions/checkout@v4 + rsync instead of git pull.
-#
 # Usage:
 #   cd /opt/zilp && git pull && bash scripts/deploy.sh
 # =============================================================================
