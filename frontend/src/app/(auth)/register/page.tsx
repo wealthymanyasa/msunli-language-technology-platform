@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { motion } from "framer-motion"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -17,11 +17,11 @@ import { authApi } from "@/services/api"
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Valid email required"),
+  email: z.string().email("Please enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirm: z.string(),
 }).refine((d) => d.password === d.confirm, {
-  message: "Passengers do not match",
+  message: "Passwords do not match",
   path: ["confirm"],
 })
 
@@ -31,9 +31,11 @@ export default function RegisterPage() {
   const router = useRouter()
   const setAuth = useAuthStore((s) => s.setAuth)
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const {
-    register: reg,
+    register,
     handleSubmit,
     formState: { errors },
   } = useForm<RegisterForm>({
@@ -57,82 +59,106 @@ export default function RegisterPage() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            Join the ZILP platform
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                placeholder="John Doe"
-                {...reg("name")}
-                className="bg-secondary/50 border-border/50"
-              />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                {...reg("email")}
-                className="bg-secondary/50 border-border/50"
-              />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+    <Card className="border-border/40 shadow-lg shadow-primary/5">
+      <CardHeader className="space-y-1 text-center pb-6">
+        <CardTitle className="text-2xl font-semibold tracking-tight">Create an account</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
+          Join the ZILP platform
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="name">Full Name</Label>
+            <Input
+              id="name"
+              placeholder="John Doe"
+              autoComplete="name"
+              {...register("name")}
+            />
+            {errors.name && (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              {...register("email")}
+            />
+            {errors.email && (
+              <p className="text-xs text-destructive">{errors.email.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
-                {...reg("password")}
-                className="bg-secondary/50 border-border/50"
+                autoComplete="new-password"
+                className="pr-10"
+                {...register("password")}
               />
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm">Confirm Password</Label>
+            {errors.password && (
+              <p className="text-xs text-destructive">{errors.password.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm">Confirm Password</Label>
+            <div className="relative">
               <Input
                 id="confirm"
-                type="password"
+                type={showConfirm ? "text" : "password"}
                 placeholder="••••••••"
-                {...reg("confirm")}
-                className="bg-secondary/50 border-border/50"
+                autoComplete="new-password"
+                className="pr-10"
+                {...register("confirm")}
               />
-              {errors.confirm && <p className="text-sm text-destructive">{errors.confirm.message}</p>}
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Creating...
-                </span>
-              ) : (
-                "Create Account"
-              )}
-            </Button>
-          </form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </motion.div>
+            {errors.confirm && (
+              <p className="text-xs text-destructive">{errors.confirm.message}</p>
+            )}
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating...
+              </span>
+            ) : (
+              "Create Account"
+            )}
+          </Button>
+        </form>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link href="/login" className="font-medium text-primary hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
   )
 }
