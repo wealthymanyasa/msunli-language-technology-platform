@@ -34,10 +34,12 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-      merge: (persisted: Partial<AuthStore>, current: AuthStore): AuthStore => {
-        const merged = { ...current, ...persisted }
-        if (merged.user && !merged.user.username && merged.user.name) {
-          merged.user = { ...merged.user, username: merged.user.name }
+      merge: (persisted: unknown, current: AuthStore): AuthStore => {
+        const p = persisted as Record<string, unknown>
+        const merged = { ...current, ...p }
+        const user = p.user as Record<string, unknown> | undefined
+        if (user && !user.username && user.name) {
+          merged.user = { ...merged.user, username: user.name } as User
         }
         return merged
       },
