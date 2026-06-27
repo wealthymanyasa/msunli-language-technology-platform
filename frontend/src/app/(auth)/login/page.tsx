@@ -43,8 +43,9 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const tokens = await authApi.login(data)
-      const user = await authApi.me()
-      setAuth(user.data, tokens.data.access_token)
+      useAuthStore.setState({ accessToken: tokens.data.access_token })
+      const meRes = await authApi.me()
+      setAuth(meRes.data, tokens.data.access_token)
       toast.success("Welcome back!")
       router.push("/dashboard")
     } catch (err: any) {

@@ -50,8 +50,9 @@ export default function RegisterPage() {
     try {
       await authApi.register({ email: data.email, password: data.password, name: data.name })
       const tokens = await authApi.login({ email: data.email, password: data.password })
-      const user = await authApi.me()
-      setAuth(user.data, tokens.data.access_token)
+      useAuthStore.setState({ accessToken: tokens.data.access_token })
+      const meRes = await authApi.me()
+      setAuth(meRes.data, tokens.data.access_token)
       toast.success("Account created successfully!")
       router.push("/dashboard")
     } catch (err: any) {
