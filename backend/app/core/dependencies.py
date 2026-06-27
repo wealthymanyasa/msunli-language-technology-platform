@@ -77,6 +77,15 @@ async def get_optional_user(
     return None
 
 
+async def get_admin_user(current_user=Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
+    return current_user
+
+
 async def get_rate_limit_dependency():
     from app.cache.redis import redis_cache
     if redis_cache and redis_cache.available:

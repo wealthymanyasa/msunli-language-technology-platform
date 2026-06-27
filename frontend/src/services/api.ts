@@ -61,6 +61,14 @@ export const analyticsApi = {
   getStatistics: () => api.get("/api/v1/statistics"),
 }
 
+export const adminApi = {
+  listUsers: () => api.get("/admin/users"),
+  updateRole: (userId: string, role: string) =>
+    api.patch(`/admin/users/${userId}/role`, { role }),
+  toggleActive: (userId: string) =>
+    api.patch(`/admin/users/${userId}/toggle-active`),
+}
+
 export const openApiService = {
   getSpec: () => api.get("/openapi.json"),
 }

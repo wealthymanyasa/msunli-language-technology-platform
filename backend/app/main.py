@@ -15,6 +15,7 @@ from app.middleware.logging_middleware import RequestLoggingMiddleware
 from app.middleware.rate_limit_middleware import RateLimitMiddleware
 from app.api.auth import router as auth_router
 from app.api.routes import router as api_router
+from app.api.admin import router as admin_router
 from app.services.processor import text_processor
 
 setup_logging(level=settings.log_level, fmt=settings.log_format)
@@ -91,6 +92,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 app.include_router(auth_router)
 app.include_router(api_router)
+app.include_router(admin_router)
 
 
 @app.get("/", tags=["system"])

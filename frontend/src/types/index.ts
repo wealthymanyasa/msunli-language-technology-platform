@@ -3,7 +3,11 @@ export interface User {
   email: string
   username: string
   role: "user" | "admin"
+  is_active: boolean
+  api_key?: string | null
   created_at: string
+  updated_at?: string
+  last_login_at?: string | null
 }
 
 export interface AuthTokens {

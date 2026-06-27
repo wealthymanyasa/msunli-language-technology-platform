@@ -26,10 +26,11 @@ import {
   ChevronRight,
   Sun,
   Moon,
+  UserCog,
 } from "lucide-react"
 import Link from "next/link"
 
-const sidebarLinks = [
+const baseLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/playground", label: "Playground", icon: Play },
   { href: "/api-explorer", label: "API Explorer", icon: Bot },
@@ -54,6 +55,13 @@ export default function DashboardLayout({
       router.push("/login")
     }
   }, [isAuthenticated, router])
+
+  const sidebarLinks = [
+    ...baseLinks,
+    ...(user?.role === "admin"
+      ? [{ href: "/admin", label: "Admin", icon: UserCog }]
+      : []),
+  ]
 
   const initials = user?.username
     ? user.username.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
