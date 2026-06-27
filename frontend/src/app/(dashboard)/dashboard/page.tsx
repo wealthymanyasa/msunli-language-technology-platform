@@ -88,7 +88,7 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { data: stats, isLoading, isError, error, refetch } = useQuery({
+  const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ["statistics"],
     queryFn: () => analyticsApi.getStatistics().then((r) => r.data),
     refetchInterval: 30000,

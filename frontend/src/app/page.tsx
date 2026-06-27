@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowRight, Check, Globe, Languages, Shield, Zap, BarChart3, Code2 } from "lucide-react"
+import { ArrowRight, Globe, Languages, Shield, Zap, BarChart3, Code2 } from "lucide-react"
 
 const features = [
   {
