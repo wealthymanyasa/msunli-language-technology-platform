@@ -25,32 +25,43 @@ import {
   Copy,
   Check,
   Terminal,
+  AlertCircle,
 } from "lucide-react"
 import { useMutation } from "@tanstack/react-query"
-import { api } from "@/services/api"
-import { cn } from "@/lib/utils"
+import { nlpApi } from "@/services/api"
 import { SUPPORTED_LANGUAGES } from "@/types"
 
-type Token = {
-  text: string
-  pos: string
-  entity: string
-  lemma: string
+type ProcessResult = {
+  original_text: string
+  cleaned_text: string
+  language: string
+  language_code: string
+  detected_language: string
+  detection_confidence: number
+  tokens: string[]
+  tokens_without_stopwords: string[]
+  token_count: number
+  token_count_without_stopwords: number
+  unique_words: number
+  word_frequency: Record<string, number>
+  execution_time_ms: number
 }
 
-const POS_COLORS: Record<string, string> = {
-  NOUN: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  VERB: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  ADJ: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  ADV: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  ADP: "bg-rose-500/20 text-rose-400 border-rose-500/30",
-  DET: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  PRON: "bg-pink-500/20 text-pink-400 border-pink-500/30",
-  CONJ: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  NUM: "bg-teal-500/20 text-teal-400 border-teal-500/30",
-  PRT: "bg-red-500/20 text-red-400 border-red-500/30",
-  X: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-  PUNCT: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
+type TokenizeResult = {
+  cleaned_text: string
+  tokens: string[]
+  token_count: number
+  language: string
+  language_code: string
+  detected_language: string | null
+  detection_confidence: number | null
+  execution_time_ms: number
+}
+
+type DetectResult = {
+  language: string
+  language_code: string
+  confidence: number
 }
 
 export default function PlaygroundPage() {
@@ -61,17 +72,17 @@ export default function PlaygroundPage() {
 
   const processMutation = useMutation({
     mutationFn: (data: { text: string; language: string }) =>
-      api.post("/api/v1/process", data).then((r) => r.data),
+      nlpApi.process(data).then((r) => r.data),
   })
 
   const tokenizeMutation = useMutation({
     mutationFn: (data: { text: string; language: string }) =>
-      api.post("/api/v1/tokenize", data).then((r) => r.data),
+      nlpApi.tokenize(data).then((r) => r.data),
   })
 
   const detectMutation = useMutation({
     mutationFn: (data: { text: string }) =>
-      api.post("/api/v1/detect-language", data).then((r) => r.data),
+      nlpApi.detectLanguage(data).then((r) => r.data),
   })
 
   const handleRun = () => {
@@ -100,22 +111,22 @@ export default function PlaygroundPage() {
     tokenizeMutation.isPending ||
     detectMutation.isPending
 
-  const result =
-    processMutation.data ||
-    tokenizeMutation.data ||
-    detectMutation.data
+  const isError =
+    processMutation.isError ||
+    tokenizeMutation.isError ||
+    detectMutation.isError
 
-  const tokens: Token[] = tokenizeMutation.data?.tokens || []
+  const errorMessage =
+    processMutation.error?.message ||
+    tokenizeMutation.error?.message ||
+    detectMutation.error?.message ||
+    "Request failed"
 
-  const getResultContent = () => {
-    if (detectMutation.data) {
-      return JSON.stringify(detectMutation.data, null, 2)
-    }
-    if (processMutation.data) {
-      return JSON.stringify(processMutation.data, null, 2)
-    }
-    return ""
-  }
+  const processResult = processMutation.data as ProcessResult | undefined
+  const tokenizeResult = tokenizeMutation.data as TokenizeResult | undefined
+  const detectResult = detectMutation.data as DetectResult | undefined
+
+  const hasResult = !!(processResult || tokenizeResult || detectResult)
 
   return (
     <div className="space-y-6">
@@ -223,7 +234,7 @@ export default function PlaygroundPage() {
                     tokenizeMutation.reset()
                     detectMutation.reset()
                   }}
-                  disabled={!text && !result}
+                  disabled={!text && !hasResult}
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>
@@ -242,15 +253,19 @@ export default function PlaygroundPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Results</CardTitle>
-                {result && (
+                {hasResult && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() =>
                       handleCopy(
                         activeTab === "tokenize"
-                          ? JSON.stringify(tokens, null, 2)
-                          : getResultContent()
+                          ? JSON.stringify(tokenizeResult?.tokens, null, 2)
+                          : JSON.stringify(
+                              processResult || detectResult,
+                              null,
+                              2
+                            )
                       )
                     }
                   >
@@ -265,7 +280,7 @@ export default function PlaygroundPage() {
             </CardHeader>
             <CardContent>
               <AnimatePresence mode="wait">
-                {!result && !isProcessing && (
+                {!hasResult && !isProcessing && !isError && (
                   <motion.div
                     key="empty"
                     initial={{ opacity: 0 }}
@@ -275,6 +290,22 @@ export default function PlaygroundPage() {
                   >
                     <Terminal className="h-12 w-12 mb-4 opacity-30" />
                     <p className="text-sm">Run a query to see results</p>
+                  </motion.div>
+                )}
+
+                {isError && (
+                  <motion.div
+                    key="error"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col items-center justify-center h-[300px] text-red-500"
+                  >
+                    <AlertCircle className="h-10 w-10 mb-3 opacity-70" />
+                    <p className="text-sm font-medium">Request Failed</p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-[250px] text-center">
+                      {errorMessage}
+                    </p>
                   </motion.div>
                 )}
 
@@ -291,7 +322,7 @@ export default function PlaygroundPage() {
                   </motion.div>
                 )}
 
-                {result && !isProcessing && activeTab === "tokenize" && (
+                {hasResult && !isProcessing && !isError && activeTab === "tokenize" && tokenizeResult && (
                   <motion.div
                     key="tokens"
                     initial={{ opacity: 0 }}
@@ -299,93 +330,144 @@ export default function PlaygroundPage() {
                     exit={{ opacity: 0 }}
                     className="space-y-4"
                   >
-                    <div className="flex flex-wrap gap-2">
-                      {tokens.map((token: Token, i: number) => (
-                        <motion.div
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <span>{tokenizeResult.token_count} tokens</span>
+                      <span className="text-border">|</span>
+                      <span>{tokenizeResult.language}</span>
+                      {tokenizeResult.execution_time_ms && (
+                        <>
+                          <span className="text-border">|</span>
+                          <span>{tokenizeResult.execution_time_ms.toFixed(1)}ms</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {tokenizeResult.tokens.map((token: string, i: number) => (
+                        <motion.span
                           key={i}
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: i * 0.03 }}
-                          className={cn(
-                            "group relative px-2.5 py-1 rounded-md border text-xs font-mono cursor-default",
-                            POS_COLORS[token.pos] || "bg-secondary/50 text-foreground border-border/50"
-                          )}
+                          transition={{ delay: i * 0.02 }}
+                          className="px-2 py-0.5 rounded-md bg-secondary/70 text-xs font-mono border border-border/30"
                         >
-                          <span>{token.text}</span>
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10">
-                            <div className="bg-popover border border-border rounded-md px-2 py-1 text-xs whitespace-nowrap shadow-lg">
-                              <div>POS: {token.pos}</div>
-                              {token.lemma && <div>Lemma: {token.lemma}</div>}
-                              {token.entity && token.entity !== "O" && (
-                                <div>Entity: {token.entity}</div>
-                              )}
-                            </div>
-                          </div>
-                        </motion.div>
+                          {token}
+                        </motion.span>
                       ))}
                     </div>
-                    <div className="flex gap-3 flex-wrap text-xs text-muted-foreground pt-2 border-t border-border/50">
-                      <span className="flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-blue-500" /> NOUN
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" /> VERB
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-amber-500" /> ADJ
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-purple-500" /> ADV
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-rose-500" /> ADP
-                      </span>
-                    </div>
+                    {tokenizeResult.cleaned_text && (
+                      <div className="pt-3 border-t border-border/30">
+                        <p className="text-xs text-muted-foreground mb-1">Cleaned text</p>
+                        <p className="text-sm">{tokenizeResult.cleaned_text}</p>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
-                {result && !isProcessing && activeTab !== "tokenize" && (
+                {hasResult && !isProcessing && !isError && activeTab === "process" && processResult && (
                   <motion.div
-                    key="json"
+                    key="process"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="relative"
+                    className="space-y-4"
                   >
-                    <pre className="bg-secondary/30 rounded-lg p-4 overflow-auto max-h-[300px] text-sm font-mono">
-                      {getResultContent()}
-                    </pre>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Badge variant="outline" className="text-xs font-mono">
+                        {processResult.detected_language}
+                      </Badge>
+                      <span className="text-xs">
+                        {(processResult.detection_confidence * 100).toFixed(1)}% confidence
+                      </span>
+                      <span className="text-border">|</span>
+                      <span className="text-xs">{processResult.execution_time_ms.toFixed(1)}ms</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold">{processResult.token_count}</p>
+                        <p className="text-xs text-muted-foreground">Tokens</p>
+                      </div>
+                      <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold">{processResult.unique_words}</p>
+                        <p className="text-xs text-muted-foreground">Unique Words</p>
+                      </div>
+                      <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold">
+                          {processResult.token_count_without_stopwords}
+                        </p>
+                        <p className="text-xs text-muted-foreground">No Stopwords</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-secondary/30 rounded-lg p-3">
+                      <p className="text-xs text-muted-foreground mb-1">Cleaned text</p>
+                      <p className="text-sm">{processResult.cleaned_text}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Tokens ({processResult.tokens.length})</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {processResult.tokens.map((token: string, i: number) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded-md bg-secondary/50 text-xs font-mono border border-border/20"
+                          >
+                            {token}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {Object.keys(processResult.word_frequency).length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Word frequency (top 10)</p>
+                        <div className="space-y-1">
+                          {Object.entries(processResult.word_frequency)
+                            .sort(([, a], [, b]) => b - a)
+                            .slice(0, 10)
+                            .map(([word, count]) => (
+                              <div key={word} className="flex items-center gap-2 text-sm">
+                                <span className="font-mono text-xs flex-1">{word}</span>
+                                <div className="h-4 bg-primary/20 rounded-sm" style={{ width: `${Math.min(count * 20, 200)}px` }} />
+                                <span className="text-xs text-muted-foreground w-6 text-right">{count}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
-                {result && !isProcessing && activeTab === "process" && processMutation.data?.sentences && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-xs text-muted-foreground font-medium">Sentences</p>
-                    {processMutation.data.sentences.map((s: any, i: number) => (
-                      <div
-                        key={i}
-                        className="bg-secondary/30 rounded-lg px-3 py-2 text-sm"
-                      >
-                        {s.text}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {result && !isProcessing && detectMutation.data?.detected_language && (
+                {hasResult && !isProcessing && !isError && activeTab === "detect" && detectResult && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    key="detect"
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="mt-4 flex items-center gap-3 p-4 rounded-lg bg-secondary/30"
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col items-center justify-center h-[300px]"
                   >
-                    <Languages className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm font-medium">
-                        {detectMutation.data.detected_language}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Confidence: {((detectMutation.data.confidence || 0) * 100).toFixed(1)}%
-                      </p>
+                    <div className="relative mb-6">
+                      <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Languages className="h-10 w-10 text-primary" />
+                      </div>
+                      <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                        <Check className="h-3.5 w-3.5 text-white" />
+                      </div>
+                    </div>
+                    <p className="text-xl font-bold">{detectResult.language}</p>
+                    <p className="text-sm text-muted-foreground font-mono mt-1">
+                      {detectResult.language_code}
+                    </p>
+                    <div className="mt-4 flex items-center gap-2">
+                      <div className="h-2 w-32 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${(detectResult.confidence * 100).toFixed(0)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {(detectResult.confidence * 100).toFixed(1)}%
+                      </span>
                     </div>
                   </motion.div>
                 )}
