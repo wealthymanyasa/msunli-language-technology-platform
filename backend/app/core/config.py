@@ -26,9 +26,7 @@ class Settings(BaseSettings):
 
     test_mode: bool = False
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = {"extra": "ignore", "env_file": ".env", "case_sensitive": False}
 
 
 settings = Settings()
