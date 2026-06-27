@@ -37,9 +37,12 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitted },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
+    defaultValues: { name: "", email: "", password: "", confirm: "" },
+    mode: "onTouched",
+    reValidateMode: "onChange",
   })
 
   const onSubmit = async (data: RegisterForm) => {
