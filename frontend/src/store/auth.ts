@@ -23,7 +23,7 @@ export const useAuthStore = create<AuthStore>()(
       setAuth: (user: User, token: string) =>
         set({ user, accessToken: token, isAuthenticated: true, isLoading: false }),
       setUser: (user: User) => set({ user }),
-      setLoading: (loading) => set({ isLoading: loading }),
+      setLoading: (loading: boolean) => set({ isLoading: loading }),
       logout: () =>
         set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false }),
     }),
@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-      merge: (persisted: any, current: any) => {
+      merge: (persisted: Partial<AuthStore>, current: AuthStore): AuthStore => {
         const merged = { ...current, ...persisted }
         if (merged.user && !merged.user.username && merged.user.name) {
           merged.user = { ...merged.user, username: merged.user.name }
