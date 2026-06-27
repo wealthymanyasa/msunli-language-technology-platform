@@ -16,7 +16,23 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var theme = "dark";
+                try {
+                  var stored = JSON.parse(localStorage.getItem("zilp-theme") || "{}");
+                  if (stored.state && stored.state.theme) theme = stored.state.theme;
+                } catch(e) {}
+                document.documentElement.classList.add(theme);
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={`${inter.className} antialiased`}>
         <Providers>{children}</Providers>
       </body>

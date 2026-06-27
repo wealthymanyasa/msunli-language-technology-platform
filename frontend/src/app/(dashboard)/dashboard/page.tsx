@@ -26,6 +26,9 @@ import {
   Bar,
 } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
+import { AlertCircle, RefreshCw } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 
 const COLORS = ["#7C3AED", "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE"]
 
@@ -85,10 +88,11 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["statistics"],
     queryFn: () => analyticsApi.getStatistics().then((r) => r.data),
     refetchInterval: 30000,
+    retry: 2,
   })
 
   const chartData = stats?.requests_over_time?.map((d: any) => ({
@@ -117,6 +121,20 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground mt-1">Overview of your NLP platform activity</p>
       </motion.div>
+
+      {isError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Backend Unavailable</AlertTitle>
+          <AlertDescription className="flex items-center gap-2">
+            <span>Could not load statistics. The backend service may be down or restarting.</span>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -301,10 +319,10 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {[
-                { label: "API Status", value: "Operational", color: "text-emerald-500" },
-                { label: "Database", value: "Connected", color: "text-emerald-500" },
-                { label: "Redis Cache", value: "Connected", color: "text-emerald-500" },
-                { label: "Tokens Processed", value: (stats?.tokens_processed || 0).toLocaleString(), color: "text-primary" },
+                { label: "API Status", value: isError ? "Unreachable" : "Operational", color: isError ? "text-red-500" : "text-emerald-500" },
+                { label: "Database", value: isError ? "Unknown" : "Connected", color: isError ? "text-red-500" : "text-emerald-500" },
+                { label: "Redis Cache", value: isError ? "Unknown" : "Connected", color: isError ? "text-red-500" : "text-emerald-500" },
+                { label: "Tokens Processed", value: isError ? "—" : (stats?.tokens_processed || 0).toLocaleString(), color: "text-primary" },
               ].map((item) => (
                 <div
                   key={item.label}

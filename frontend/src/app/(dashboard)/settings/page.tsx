@@ -109,7 +109,7 @@ export default function SettingsPage() {
                     <Label htmlFor="name">Full Name</Label>
                     <Input
                       id="name"
-                      defaultValue={user?.name || "John Doe"}
+                      defaultValue={user?.username || "User"}
                       className="bg-secondary/30"
                     />
                   </div>

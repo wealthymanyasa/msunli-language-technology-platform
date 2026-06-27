@@ -34,6 +34,13 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
+      merge: (persisted: any, current: any) => {
+        const merged = { ...current, ...persisted }
+        if (merged.user && !merged.user.username && merged.user.name) {
+          merged.user = { ...merged.user, username: merged.user.name }
+        }
+        return merged
+      },
     }
   )
 )

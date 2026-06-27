@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAuthStore } from "@/store/auth"
 import { useAuth } from "@/hooks/use-auth"
+import { useThemeStore } from "@/store/theme"
 import {
   LayoutDashboard,
   Play,
@@ -23,6 +24,8 @@ import {
   Menu,
   X,
   ChevronRight,
+  Sun,
+  Moon,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -52,8 +55,8 @@ export default function DashboardLayout({
     }
   }, [isAuthenticated, router])
 
-  const initials = user?.name
-    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+  const initials = user?.username
+    ? user.username.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "U"
 
   return (
@@ -120,6 +123,16 @@ export default function DashboardLayout({
             })}
           </nav>
 
+          {/* Theme toggle */}
+          <button
+            onClick={() => useThemeStore.getState().toggleTheme()}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-secondary/50 w-full"
+          >
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="h-4 w-4 absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="ml-6">Theme</span>
+          </button>
+
           <Separator className="my-4" />
 
           {/* User */}
@@ -131,7 +144,7 @@ export default function DashboardLayout({
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start text-sm">
-                <span className="font-medium">{user?.name || "User"}</span>
+                  <span className="font-medium">{user?.username || "User"}</span>
                 <span className="text-xs text-muted-foreground">{user?.email || ""}</span>
               </div>
             </DropdownMenuTrigger>

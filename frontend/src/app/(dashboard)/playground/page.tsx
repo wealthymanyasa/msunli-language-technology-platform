@@ -29,8 +29,7 @@ import {
 import { useMutation } from "@tanstack/react-query"
 import { api } from "@/services/api"
 import { cn } from "@/lib/utils"
-
-type Language = "en" | "es" | "fr" | "de" | "zh" | "ja" | "ar" | "hi" | "pt" | "ru"
+import { SUPPORTED_LANGUAGES } from "@/types"
 
 type Token = {
   text: string
@@ -38,19 +37,6 @@ type Token = {
   entity: string
   lemma: string
 }
-
-const LANGUAGES: { value: Language; label: string }[] = [
-  { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-  { value: "de", label: "German" },
-  { value: "zh", label: "Chinese" },
-  { value: "ja", label: "Japanese" },
-  { value: "ar", label: "Arabic" },
-  { value: "hi", label: "Hindi" },
-  { value: "pt", label: "Portuguese" },
-  { value: "ru", label: "Russian" },
-]
 
 const POS_COLORS: Record<string, string> = {
   NOUN: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -173,9 +159,9 @@ export default function PlaygroundPage() {
                     <SelectValue placeholder="Language" />
                   </SelectTrigger>
                   <SelectContent>
-                    {LANGUAGES.map((l) => (
-                      <SelectItem key={l.value} value={l.value}>
-                        {l.label}
+                    {SUPPORTED_LANGUAGES.map((l) => (
+                      <SelectItem key={l.code} value={l.code}>
+                        {l.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
